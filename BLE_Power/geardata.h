@@ -1,9 +1,0 @@
-extern const unsigned int GEAR8[];
-extern const unsigned int GEAR9[];
-extern const unsigned int GEAR10[];
-extern const unsigned int GEAR11[];
-extern const unsigned int GEAR12[];
-extern const unsigned int GEAR13[];
-extern const unsigned int GEAR14[];
-extern const unsigned int GEAR15[];
-extern const unsigned int GEAR16[];

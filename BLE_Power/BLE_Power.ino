@@ -1,249 +1,176 @@
+//#define DEBUG           
+#ifdef DEBUG
+  #define DEBUG_PRINT(x)        Serial.print(x)
+  #define DEBUG_PRINTLN_HEX(x)  Serial.println(x,HEX)
+  #define DEBUG_PRINTLN(x)      Serial.println(x)
+#else
+  #define DEBUG_PRINT(x)
+  #define DEBUG_PRINTLN_HEX(x)
+  #define DEBUG_PRINTLN(x) 
+#endif 
+
+#define CALIBRATE_WAIT_MS   3000
+#define HALL_EFFECT_SENSOR  27
+#define LED_PIN             LED_RED
+#define TIMING_ERROR        10
+
+// Main BLE stack
 #include <bluefruit.h>
 
-#include "Gear.h"
-GyroClass gyroclass;
+// MPU6050 Power Data
+#include "Power.h"
+CalculatePower calculatepower;
 
+// Power Meter BLE services
 #include "BLEService.h"
 SetupGATT setupgatt;
 BLENotify blenotify;
 
-#include "geardata.h"
+// Battery BLE service
+#include "BatteryService.h"   
+FeatherBattery featherbattery;
 
+// Variables used in main loop
 int cadence = 0;
-
-  long minVal, maxVal;
-  long angle;
-  
-  int gear = 16;
-  bool lockGear = false;
-  uint16_t pwr;
-  int pcnt=100;
-  int timing_loop = 0;
-  bool calibrating = false;
-  
+unsigned long tick = 0;
 unsigned long last_event_time = 0;
-    long total_revolutions = 0;
+unsigned long total_revolutions = 0;
+uint16_t event_time = 0;
 
-    int gear_threshhold = 10;
-
-bool is_connected = false;
-
-
-const int hallPin = 27;     // the number of the hall effect sensor pin
-
-
-void setup()
-{
+void setup() {
   Serial.begin(115200);
 
-  pinMode(hallPin, INPUT);     
-  gyroclass.setupWire();
-digitalWrite(LED_RED,HIGH);
-
-  Serial.println("Setup max/min values");
+  pinMode(HALL_EFFECT_SENSOR, INPUT);               // Setup hall effect sensor to detect cadence
   
-  //delay(2000);
+  calculatepower.begin();                           // Setup MPU6050
 
+  DEBUG_PRINTLN("\nSet gear max and min values");   // Configure set points
+  
+    digitalWrite(LED_PIN,HIGH);
+    delay(CALIBRATE_WAIT_MS);
+    calculatepower.setLowGear();
+    digitalWrite(LED_PIN,LOW);
+    delay(CALIBRATE_WAIT_MS);
+    digitalWrite(LED_PIN,HIGH);
+    delay(CALIBRATE_WAIT_MS);
+    digitalWrite(LED_PIN,LOW);
+    calculatepower.setHighGear();
 
-calibrate(true);
-digitalWrite(LED_RED,HIGH);
+  while ( !Serial ) delay(10);                      // for nrf52840 with native usb
 
-delay(6000);
-calibrate(false);
-
-
-  while ( !Serial ) delay(10);   // for nrf52840 with native usb
-
-  setupgatt.Config();
-  Serial.println("Configuring the Cycle Power Service");
-  setupgatt.CyclePower();  
-  setupgatt.CycleGear();  
+  DEBUG_PRINTLN("Configuring the Cycle Power Service");
+  setupgatt.Config();                             
+  setupgatt.CyclePower();                         
+  setupgatt.CycleSettings();  
   
   // Setup the advertising packet(s)
-  Serial.println("Setting up the advertising payload(s)");
+  DEBUG_PRINTLN("Setting up the advertising payload(s)");
   setupgatt.Advertising();
 
-  Serial.println("Ready Player One!!!");
-  Serial.println("\nAdvertising");
-  digitalWrite(LED_RED,LOW);
+  DEBUG_PRINTLN("Advertising!");
 }
 
+void loop() {
 
+  if ( setupgatt.get_connected() == true ) {                         // Only send values if the peripheral is connected
 
-void loop()
-{
-  
-  if (is_connected == true && calibrating == false) {
-
-//           Serial.println(millis());        
-          if ( digitalRead(hallPin) == LOW ) {   // millis()%428 == 0 
-                     
+          // Get cadence information
           
-          unsigned long time_diff = millis() - last_event_time; //check that we are still pedaling
-          //Serial.print("time_diff ");Serial.println(time_diff);
+          if ( digitalRead(HALL_EFFECT_SENSOR) == LOW ) {           // Detect a full revolution
 
-          //Serial.print("rev_diff ");Serial.println(revolutions_diff);
-          int new_cadence = 61000 / time_diff;  //(60000 / time_diff);
+            digitalWrite(LED_PIN,HIGH);                             // Trigger visual for revolution
+                               
+          unsigned long time_diff = millis() - last_event_time;     // Time difference since last rotation (not event time yet)
+          last_event_time = millis();
+          
+          /* 
+           *  time_diff = 1 revolution
+           *  time_diff / time_diff = 1 revolution / time_diff                                       (gives revolution / ms)
+           *  time_diff / time_diff * 60000 (ms in a minute) = 1 revolution * 60000 / time_diff      (gives rev / min)
+           */
+          cadence = 60000 / time_diff;  
+          
+          // Add to cumulative value
+          total_revolutions++;                                       
 
+          /*
+           *  In spec - Unit is in seconds with a resolution of 1/2048 
+           *  so millis is multiplied by 1000 (to get seconds) and divided by 1024
+           *  Spec accepts a 16bit value for the time so anything higher than 2^16 (65536) needs to rollover using modulus
+           */
+          event_time = ( millis() * 1000 / 1024 ) % 65536;  
 
-          if ( new_cadence < 140 ) {
-                    int cadence_offset = 0;
-                    total_revolutions++;
-                    cadence  = new_cadence + cadence_offset;
-                    last_event_time = millis();
-          }
-            digitalWrite(LED_RED,HIGH);
-            //Serial.println("REV");
-        
-            delay(5);
-            digitalWrite(LED_RED,LOW);
-            
-            while ( digitalRead(hallPin) == LOW ) {
-
+            // Prevent getting repeated values for the same revolution i.e. if cadence sensor stops in front of the hall effect sensor
+            while ( digitalRead(HALL_EFFECT_SENSOR) == LOW ) {    
+              delay(5);
               //wait until event finishes
             }
-          
-            //Serial.print("cadence ");Serial.println(cadence);
+            
+            digitalWrite(LED_PIN,LOW);                            // Trigger end of visual
+            
                     
           }
-          else if ( millis() - last_event_time > 6000 ) {  //after 6 seconds of inaction
-              cadence = 0;
+          else if ( millis() - last_event_time > 6000 ) {         // Return cadence to zero if the pedalling is stopped for 6 seconds
+              cadence = 0;          
+          }   // End of digitalRead(HALL_EFFECT_SENSOR) == LOW loop
+
+        /* 
+         *  Control the timing of the following events using millis() to detect every half second
+         *  If sensor information is being missed then increase the TIMING ERROR
+         *  Using old_tick ensure that each block only sends once
+         *  If power meter response is sluggish, adjust these values to update the information more often
+         */
+        unsigned long old_tick = tick;        
+        if (millis()%500 <= TIMING_ERROR) {               
+          tick++;
+        }
+
+        // Send sensor information     
+        if ( tick != old_tick && tick%2 == 0 ) {              // Send power data every second half second
+            uint16_t power = calculatepower.CadenceToPower(cadence);      // Get power from cadence
+            blenotify.CyclePower(power, total_revolutions, event_time );  
             
-          }
-            /*
-          Serial.print("Event Time ");Serial.print(event_time);
-          Serial.print(" Time_Diff ");Serial.println(time_diff);
-          */
+            DEBUG_PRINT("Cadence: " );DEBUG_PRINT(cadence);DEBUG_PRINT(" Power: " );DEBUG_PRINT(power);DEBUG_PRINT(" Total Revs: ");DEBUG_PRINT(total_revolutions);DEBUG_PRINT(" Event Time: ");DEBUG_PRINTLN(event_time);        
+        }
         
-          
-          //Serial.print("Cadence ");Serial.println(cadence);  
+        if ( tick != old_tick && tick%2 == 0 ) {                   // Send settings information every second tick i.e. 1s
+            calculatepower.update();                  // Update gear and angle            
+            uint16_t power = calculatepower.CadenceToPower(cadence);      // Get power from cadence
+            int battery_percent = featherbattery.getPercent();            // Get battery value
+            blenotify.CycleSettings( calculatepower.getGear(), calculatepower.getAngle(), cadence, battery_percent );
             
-
-        if ( millis()%100 == 0 ) { //every tenth of a second
-            timing_loop++;
-            //Serial.println(timing_loop);
-              
+            DEBUG_PRINT("Gear: " );DEBUG_PRINT(calculatepower.getGear());DEBUG_PRINT(" Angle: ");DEBUG_PRINT(calculatepower.getAngle());DEBUG_PRINT(" Cadence: ");DEBUG_PRINTLN(cadence);
             
-            
-            if ( timing_loop%15 == 0 ) {
-                //Serial.println("notify");
-                  blenotify.Gear( gear, pwr, angle, cadence, pcnt, gear_threshhold );
-              
-            }
-            else if ( timing_loop%10 == 0 ) {
-                //Serial.println("pwr");
-          
-            pwr = calcPwr(cadence, gear);
-            blenotify.Power(pwr, total_revolutions, last_event_time );
-            
-              //Serial.print("Gear ");Serial.print(gear);
-              //Serial.print(" Angle ");Serial.println(angle);
-              //Serial.print("Gear: ");Serial.print(gear);  Serial.print(" Cadence: ");Serial.print(cadence); Serial.print(" Power: ");Serial.println(pwr);      
-            }
-            else if ( timing_loop%2 == 0 ) {
-              if ( lockGear == false ) {
-                gyroclass.getGear( );      //add app option to change threshhold
+            // Check for a command from the app
+            int command = setupgatt.get_command();
+              if ( command > 0 ) {
+                    
+                    switch(command){                                           
+                        case 'a': 
+                          calculatepower.setLowGear();
+                          
+                          break;
+                        case 'b': 
+                          calculatepower.setHighGear();
+                          
+                          break;                          
+                        default:                                                // Assume gear is somehow out of bounds 
+                          
+                          break;
+                        }
+                        
+                     setupgatt.clear_command();
               }
-            }
+            } 
             
-            if ( timing_loop == 60 ) {
-                 blenotify.Battery();
-                timing_loop = 0;
-            }
-         }
-          delay(1);
-  }
+            if ( tick != old_tick && tick%120 == 0 ) {                  // Send battery value every minute
+                int battery_percent = featherbattery.getPercent();            // Get battery value
+                blenotify.Battery( battery_percent );
+                DEBUG_PRINT("Batery: ");DEBUG_PRINTLN(battery_percent);
+            } 
+         
+          
+          
+  } // End of setupgatt.get_connected() == true loop
+  
 } 
-
-uint16_t calcPwr(int current_cadence, int current_gear) {
-
-  if ( current_cadence != 0 && current_cadence <= 140 ) {
-    //pwr = (cadence * cadence * (gear2power[gear][0]/100) ) + ( cadence * (gear2power[gear][1]/100) ) + (gear2power[gear][2]);
-    //pwr<0?pwr=0:pwr=pwr;
-    if ( current_gear == 8 ) {
-      pwr = pgm_read_word( &GEAR8[current_cadence] );
-    }
-    if ( current_gear == 9 ) {
-      pwr = pgm_read_word( &GEAR9[current_cadence] );
-    }
-    if ( current_gear == 10 ) {
-      pwr = pgm_read_word( &GEAR10[current_cadence] );
-    }    
-    if ( current_gear == 11 ) {
-      pwr = pgm_read_word( &GEAR11[current_cadence] );
-    }
-    if ( current_gear == 12 ) {
-      pwr = pgm_read_word( &GEAR12[current_cadence] );
-    }
-    if ( current_gear == 13 ) {
-      pwr = pgm_read_word( &GEAR13[current_cadence] );
-    }
-    if ( current_gear == 14 ) {
-      pwr = pgm_read_word( &GEAR14[current_cadence] );
-    }
-    if ( current_gear == 15 ) {
-      pwr = pgm_read_word( &GEAR15[current_cadence] );
-    }
-    if ( current_gear == 16 ) {
-      pwr = pgm_read_word( &GEAR16[current_cadence] );
-    }
-    
-
-    
-  }
-  else if ( current_cadence > 140 ) {
-    
-      pwr = pwr;
-    
-  }
-  else if ( current_cadence == 0 ) {
-    pwr = 0;
-  }
-  
-  
-  
-  
-  return pwr;
-}
-
-void calibrate(bool setMin) {
-
-  
-
-     //calibrate max
-      int certainty = 0;
-      double offset = 10;
-      int sway = 50; //check that there hasn't been sudden big change in angle
-      int certainty_threshhold = 16; //the number of successful loops req before triggering
-    
-      while ( certainty < certainty_threshhold ) {
-        long new_angle = gyroclass.readWire();
-    
-        if ( abs(new_angle - angle)  < offset && abs(new_angle - angle) < sway ) {
-          certainty++;
-        }
-        else {
-          certainty<1?certainty=0:certainty--;
-        }
-    Serial.println(certainty);
-          Serial.print("Angle ");Serial.println(angle);
-        digitalToggle(LED_RED);
-        delay(120);
-        angle = new_angle;
-      }
-    
-
-      if (setMin == true) {
-        minVal = angle;
-      }
-      else {
-        maxVal = angle;
-      }
-      digitalWrite(LED_RED,LOW);
-
-  
-      
-}
-
-//TODO
-//power consumption on mpu6050

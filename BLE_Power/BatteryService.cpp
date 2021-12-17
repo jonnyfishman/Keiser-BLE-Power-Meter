@@ -1,6 +1,6 @@
 #include "BatteryService.h"
 
-  int BatteryClass::readVBAT() {
+void FeatherBattery::readVBAT() {
   float raw;
 
   // Set the analog reference to 3.0V (default = 3.6V)
@@ -13,7 +13,7 @@
   delay(1);
 
   // Get the raw 12-bit, 0..3000mV ADC value
-  raw = analogRead(vbat_pin);
+  raw = analogRead(PIN_VBAT);
 
   // Set the ADC back to the default settings
   analogReference(AR_DEFAULT);
@@ -22,25 +22,24 @@
   // Convert the raw value to compensated mv, taking the resistor-
   // divider into account (providing the actual LIPO voltage)
   // ADC range is 0..3000mV and resolution is 12-bit (0..4095)
-  float mvolts = raw * REAL_VBAT_MV_PER_LSB;
+  mvolts = raw * REAL_VBAT_MV_PER_LSB;
 
-  if(mvolts<3300)
-    return 0;
-
-  if(mvolts <3600) {
-    mvolts -= 3300;
-    return mvolts/30;
+  if(mvolts < MINIMUM_LPIO_VOLTAGE_MV) {
+    mvolts = 0;
   }
-
-  mvolts -= 3600;
-  return 10 + (mvolts * 0.15F );  // thats mvolts /6.66666666  
+  else if(mvolts < MAXIMUM_LPIO_VOLTAGE_MV) {
+    mvolts -= MINIMUM_LPIO_VOLTAGE_MV;
+    mvolts / 30;
+  }
+  else {
+    mvolts -= MAXIMUM_LPIO_VOLTAGE_MV;
+  }
+  
+  percent = 10 + (mvolts * 0.15F );  // thats mvolts /6.66666666   
 
 }
 
-int BatteryClass::getPCNT() {
-  int voltage = BatteryClass::readVBAT();   
-//Serial.print("voltage: ");Serial.println(voltage);
-
-  pcnt = map(voltage,300,370,0,100);
-  return pcnt;
+int FeatherBattery::getPercent() {
+  this->readVBAT();
+  return percent;
 }
