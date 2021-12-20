@@ -83,11 +83,11 @@ And temporarily mounted of the Keiser M3 with MPU6050 at the top.
    ```sh
    git clone https://github.com/jonnyfishman/Keiser-BLE-Power-Meter.git
    ```
-4. Open `BLE_Power/BLE_Power.ino` in the Arduino IDE (if you move the main `.ino` file make sure that all the included `.cpp` and `.h` files are in the same directory)
+3. Open `BLE_Power/BLE_Power.ino` in the Arduino IDE (if you move the main `.ino` file make sure that all the included `.cpp` and `.h` files are in the same directory)
 
-5. Edit the code if needed.
+4. Edit the code if needed.
 
-> **By default debugging is disabled. To enable it remove the comments from the start of the file.**
+>> By default debugging is disabled. To enable it remove the comments from the start of the file.
 
 ```ide
 //#define DEBUG  
@@ -95,7 +95,7 @@ And temporarily mounted of the Keiser M3 with MPU6050 at the top.
 #define DEBUG  
 ```
 
-> **Optionally adjust.**
+>> Optionally adjust.
 
 ```ide
 #define CALIBRATE_WAIT_MS   3000          // How long the sensor will initially wait for the low and high set points
@@ -104,9 +104,9 @@ And temporarily mounted of the Keiser M3 with MPU6050 at the top.
 #define TIMING_ERROR        10            // For the state engine timing. Increase data does not seem to be arriving
 ```
 
-6. Flash the code to your board.
+5. Flash the code to your board.
 
-7. Connect to the training platform of your choice. When powered the device should show up as a power source.
+6. Connect to the training platform of your choice. When powered the device should show up as a power source.
 
 ![Zwift Device Selection Screen](assets/images/Zwift.png)
 
@@ -119,6 +119,9 @@ And temporarily mounted of the Keiser M3 with MPU6050 at the top.
 <ul>
   <li>Add CCCD callback for custom settings to detect if sending is required</li>
   <li>Update app and publish</li>
+  <li>Explain gear selection code</li>
+  <li>Explain how to map power from other exercise bikes</li>
+  <li>Add BLE troubleshooting guide</li>
 </ul>
 
 <!-- LICENSE -->
