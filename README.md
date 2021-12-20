@@ -62,13 +62,13 @@ It also uses an MPU6050 on the gear selector to detect changes and adjust the po
 
 Components are wired as follows.
 
-![BLE Power Meter Fritzing](assets/images/BLE Power Meter Schematic.png)
+![BLE Power Meter Fritzing](assets/images/BLE-Power-Meter-Schematic.png)
 
 This can be soldered compactly as follows. **Notice the horizontal orientation of the MPU6050.**
 
 ![Soldered Circuit](assets/images/Soldered.png)
 
-And temporarily mounted of the Keiser M3.
+And temporarily mounted of the Keiser M3 with MPU6050 at the top.
 
 ![Circuit Mounted](assets/images/Mounted.png)
 
@@ -79,7 +79,7 @@ And temporarily mounted of the Keiser M3.
 
 2. Clone the repo
    ```sh
-   git clone https://github.com/jonnyfishman/Entry-Central-Telegram-Bot.git
+   git clone https://github.com/jonnyfishman/Keiser-BLE-Power-Meter.git
    ```
 4. Open `BLE_Power/BLE_Power.ino` in the Arduino IDE (if you move the main `.ino` file make sure that all the included `.cpp` and `.h` files are in the same directory)
 
@@ -88,7 +88,7 @@ And temporarily mounted of the Keiser M3.
 By default debugging is disabled. To enable it remove the comments from the start of the file.
 ```ide
 //#define DEBUG  
-becomes
+    BECOMES
 #define DEBUG  
 ```
 
