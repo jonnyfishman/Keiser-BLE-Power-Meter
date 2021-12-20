@@ -1,4 +1,5 @@
 
+<div id="top"></div>
 <h3 align="center">BLE Power Meter</h3>
 
   <p align="center">
@@ -23,6 +24,7 @@
         <li><a href="#prerequisites">Bill of Materials</a></li>
         <li><a href="#prerequisites">Wiring</a></li>
         <li><a href="#installation">Installation</a></li>
+        <li><a href="#acknowledgments">Acknowledgments</a></li>        
       </ul>
     </li>
     <li><a href="#license">License</a></li>
@@ -85,14 +87,16 @@ And temporarily mounted of the Keiser M3 with MPU6050 at the top.
 
 5. Edit the code if needed.
 
-By default debugging is disabled. To enable it remove the comments from the start of the file.
+> **By default debugging is disabled. To enable it remove the comments from the start of the file.**
+
 ```ide
 //#define DEBUG  
     BECOMES
 #define DEBUG  
 ```
 
-**Optionally adjust.**
+> **Optionally adjust.**
+
 ```ide
 #define CALIBRATE_WAIT_MS   3000          // How long the sensor will initially wait for the low and high set points
 #define HALL_EFFECT_SENSOR  27            // Where the hall effect sensor sense pin is connected
@@ -121,5 +125,14 @@ By default debugging is disabled. To enable it remove the comments from the star
 ## License
 
 Distributed under the MIT License. See `LICENSE.txt` for more information.
+
+<p align="right">(<a href="#top">back to top</a>)</p>
+
+<!-- ACKNOWLEDGMENTS -->
+## Acknowledgments
+
+A lot of the inspiration and help with the bluetooth characteristics comes from Bruno Fernandez-Ruiz's Javascript power meter code. He has various other power meter projects if you are interested.
+
+[https://github.com/olympum/ble-cycling-power](https://github.com/olympum/ble-cycling-power)
 
 <p align="right">(<a href="#top">back to top</a>)</p>
