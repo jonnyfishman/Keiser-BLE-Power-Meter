@@ -2,7 +2,7 @@
 <h3 align="center">BLE Power Meter</h3>
 
   <p align="center">
-    Got an old exercise bike
+    Do you have an exercise bike without bluetooth but would still like to use training platforms like Zwift, Rouvy and Training Peaks? Using the Adafruit Feather nRF52 you can.
     <br />
 
   </p>
@@ -20,7 +20,8 @@
     <li>
       <a href="#getting-started">Getting Started</a>
       <ul>
-        <li><a href="#prerequisites">Prerequisites</a></li>
+        <li><a href="#prerequisites">Bill of Materials</a></li>
+        <li><a href="#prerequisites">Wiring</a></li>
         <li><a href="#installation">Installation</a></li>
       </ul>
     </li>
@@ -33,9 +34,13 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-I regularly use Entry Central to sign up for sporting events. I tend to leave signing up till the last minute in case other factors mean I can't attend. This php script checks the number of spaces remaining for an event and pushes the result as a message to the Telegram app.
+Most older exercise bikes lack modern bluetooth compatibility but do still have a readout of the power generated. Using the Adafruit Feather you can bridge this gap.
 
-The script is currently designed just to get information from one website [Entry Central](https://www.entrycentral.com/) but can be easily adapted to scrape information from other websites. It uses a very simple implementation of the Telegram API for simplicity.
+This project was designed for the Keiser M3 exercise bike specifically but could be adapted to various others.
+
+Most older exercise bikes use pedal cadence to calculate the power which appears on the head unit. To keep it compact and the design below uses a hall effect sensor and a magnet on the pedal arm to calculate cadence but you could modify the bikes cadence sensor directly as an alternative.
+
+It also uses an MPU6050 on the gear selector to detect changes and adjust the power output. Once calibrated it can be adjusted to replicate the changes in power seen on the exercise bike head unit.
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
@@ -46,50 +51,60 @@ The script is currently designed just to get information from one website [Entry
 
 
 
-### Prerequisites
+### Bill of Materials
 
-* PHP >= 5.3.0
-* Telegram app installed
-* A Telegram bot ([Creating a new bot](https://core.telegram.org/bots#6-botfather))
-* Cron or similar scheduler
+* An [Adafruit Feather nRF52](https://www.adafruit.com/product/3406)
+* MPU6050
+* A low voltage unipolar hall effect sensor
+* Lipo battery (optional)
+
+### Wiring
+
+Components are wired as follows.
+
+![BLE Power Meter Fritzing](assets/images/BLE Power Meter Schematic.png)
+
+This can be soldered compactly as follows. **Notice the horizontal orientation of the MPU6050.**
+
+![Soldered Circuit](assets/images/Soldered.png)
+
+And temporarily mounted of the Keiser M3.
+
+![Circuit Mounted](assets/images/Mounted.png)
+
 
 ### Installation
 
-1. Clone the repo
+1. Follow the instructions on the Adafruit site to connect the nRF52832 to Arduino IDE. [https://learn.adafruit.com/bluefruit-nrf52-feather-learning-guide](https://learn.adafruit.com/bluefruit-nrf52-feather-learning-guide)
+
+2. Clone the repo
    ```sh
    git clone https://github.com/jonnyfishman/Entry-Central-Telegram-Bot.git
    ```
-2. Create or use an existing channel within the Telegram app and send yourself a message.
+4. Open `BLE_Power/BLE_Power.ino` in the Arduino IDE (if you move the main `.ino` file make sure that all the included `.cpp` and `.h` files are in the same directory)
 
-3. Forward the message to @getidsbot and follow the instructions to get your chat id details ([info here](https://github.com/wjclub/telegram-bot-getids))
+5. Edit the code if needed.
 
-![Start @getidsbot](/assets/images/chat_id.jpg)
+By default debugging is disabled. To enable it remove the comments from the start of the file.
+```ide
+//#define DEBUG  
+becomes
+#define DEBUG  
+```
 
-4. Rename config file
-   ```sh
-   mv config.template.php config.php
-   ```
-3. Edit `config.php` to include the information from step 2 and 3.
-   ```php
-   $Telegram_token = "ENTER LONG TOKEN";
-   $Telegram_chat_id = "ENTER CHAT ID, MAKE SURE TO INCLUDE THE MINUS SIGN";
-   ```
-4. Edit `index.php` with the event details. It is possible to include multiple events. Each event needs a name (as a string) followed by an id (as a number). Place a comma after each id.
-   ```php
-   $events = array(
-        'Event A' => 123456,               
-        'Event B' => 654321,
-   );
-   ```
-5. Test your information using the command line. Each event will return 'Successfully sent' or a relevant error message.
-    ```sh
-    /usr/bin/php index.php
-    ```
+**Optionally adjust.**
+```ide
+#define CALIBRATE_WAIT_MS   3000          // How long the sensor will initially wait for the low and high set points
+#define HALL_EFFECT_SENSOR  27            // Where the hall effect sensor sense pin is connected
+#define LED_PIN             LED_RED       // For visual reference using the onboard LED
+#define TIMING_ERROR        10            // For the state engine timing. Increase data does not seem to be arriving
+```
 
-6. Create a cron job to regular check the event. The one below will check at 10am and 4pm. <i>Be mindful about how often you check for updates. Too often could see your IP being flagged as a potential DDoS attacker.</i>
-   ```sh
-   0 10,16 * * *    /usr/bin/php /LOCATION OF index.php/index.php  > dev/null
-   ```
+6. Flash the code to your board.
+
+7. Connect to the training platform of your choice. When powered the device should show up as a power source.
+
+![Zwift Device Selection Screen](assets/images/Zwift.png)
 
 
 <p align="right">(<a href="#top">back to top</a>)</p>
