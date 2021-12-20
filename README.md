@@ -87,7 +87,7 @@ And temporarily mounted of the Keiser M3 with MPU6050 at the top.
 
 4. Edit the code if needed.
 
->> By default debugging is disabled. To enable it remove the comments from the start of the file.
+> By default debugging is disabled. To enable it remove the comments from the start of the file.
 
 ```ide
 //#define DEBUG  
@@ -95,7 +95,7 @@ And temporarily mounted of the Keiser M3 with MPU6050 at the top.
 #define DEBUG  
 ```
 
->> Optionally adjust.
+> Optionally adjust.
 
 ```ide
 #define CALIBRATE_WAIT_MS   3000          // How long the sensor will initially wait for the low and high set points
