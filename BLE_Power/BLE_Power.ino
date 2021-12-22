@@ -9,10 +9,10 @@
   #define DEBUG_PRINTLN(x) 
 #endif 
 
-#define CALIBRATE_WAIT_MS   3000
-#define HALL_EFFECT_SENSOR  27
-#define LED_PIN             LED_RED
-#define TIMING_ERROR        10
+#define CALIBRATE_WAIT_MS   3000          // How long the sensor will initially wait for the low and high set points
+#define HALL_EFFECT_SENSOR  27            // Where the hall effect sensor sense pin is connected
+#define LED_PIN             LED_RED       // For visual reference using the onboard LED
+#define TIMING_ERROR        10            // For the state engine timing. Increase data does not seem to be arriving
 
 // Main BLE stack
 #include <bluefruit.h>
